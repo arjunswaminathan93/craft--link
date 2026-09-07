@@ -3249,12 +3249,47 @@ header {
   border: 1px solid #E0E0FF !important;
 }
 
-.discover-product-actions .product-contact-btn {
-  color: #FFFFFF !important;
-  background: linear-gradient(135deg, #5B5CE2, #4647C9) !important;
-  border: 1px solid transparent !important;
-  box-shadow: 0 8px 20px rgba(91, 92, 226, 0.18) !important;
+.product-contact-btn {
+  width: 100%;
+  min-height: 46px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  margin-top: 18px;
+  padding: 12px 16px;
+
+  transition: all 0.25s ease;
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.25);
 }
+
+.product-contact-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(79, 70, 229, 0.35);
+}
+
+.product-contact-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.product-contact-btn:disabled {
+  background: #16a34a;
+  color: #ffffff;
+  cursor: default;
+  opacity: 0.85;
+  box-shadow: none;
+}
+
 
 .empty-state.discover-empty-state {
   width: 100% !important;
@@ -4495,16 +4530,11 @@ header {
 /* =========================================================
    DYNAMIC PRICING
 ========================================================= */
-
 .pricing-grid {
   display: grid;
-
-  grid-template-columns:
-    repeat(3, minmax(0, 1fr));
-
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 22px;
 }
-
 
 .pricing-card {
   background: #ffffff;
@@ -6038,4 +6068,411 @@ header {
   color: #222222;
   font-weight: 600;
   text-align: right;
+}
+/* =========================================
+   CRAFTLINK LOGIN PAGE
+========================================= */
+
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 42% 58%;
+  background: #f5f8fb;
+}
+
+/* LEFT SIDE */
+
+.login-brand-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px;
+
+  background:
+    radial-gradient(
+      circle at 20% 20%,
+      rgba(91, 92, 226, 0.35),
+      transparent 35%
+    ),
+    radial-gradient(
+      circle at 80% 80%,
+      rgba(22, 184, 196, 0.22),
+      transparent 35%
+    ),
+    linear-gradient(
+      135deg,
+      #0B1220 0%,
+      #111B31 50%,
+      #18274A 100%
+    );
+
+  color: white;
+}
+
+.login-brand {
+  max-width: 420px;
+}
+
+.login-logo {
+  width: 68px;
+  height: 68px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 20px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #6C6EF0,
+      #19C2D0
+    );
+
+  margin-bottom: 28px;
+
+  box-shadow:
+    0 15px 40px
+    rgba(91, 92, 226, 0.35);
+}
+
+.login-brand h1 {
+  font-size: 48px;
+  margin-bottom: 15px;
+}
+
+.login-brand p {
+  font-size: 17px;
+  line-height: 1.7;
+
+  color:
+    rgba(255, 255, 255, 0.65);
+
+  margin-bottom: 30px;
+}
+
+.login-feature {
+  display: inline-flex;
+
+  align-items: center;
+  gap: 10px;
+
+  padding: 12px 18px;
+
+  border-radius: 12px;
+
+  background:
+    rgba(255, 255, 255, 0.08);
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.1);
+
+  color: #5DDDE5;
+}
+
+
+/* RIGHT SIDE */
+
+.login-form-section {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 40px;
+}
+
+.login-box {
+  width: 100%;
+  max-width: 480px;
+}
+
+
+/* HEADING */
+
+.login-heading {
+  margin-bottom: 35px;
+}
+
+.login-heading p {
+  font-size: 12px;
+
+  font-weight: 700;
+
+  letter-spacing: 1.5px;
+
+  color: #5B5CE2;
+
+  margin-bottom: 10px;
+}
+
+.login-heading h2 {
+  font-size: 34px;
+
+  color: #111B2E;
+
+  margin-bottom: 10px;
+}
+
+.login-heading span {
+  color: #748391;
+}
+
+
+/* ROLE SELECTION */
+
+.role-selection {
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 15px;
+
+  margin-bottom: 30px;
+}
+
+.role-card {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 15px;
+
+  text-align: left;
+
+  padding: 20px;
+
+  border-radius: 16px;
+
+  border:
+    1px solid
+    #E7ECF3;
+
+  background: white;
+
+  cursor: pointer;
+
+  transition: 0.25s;
+}
+
+.role-card svg {
+  color: #5B5CE2;
+}
+
+.role-card strong {
+  display: block;
+
+  font-size: 16px;
+
+  color: #111B2E;
+
+  margin-bottom: 6px;
+}
+
+.role-card span {
+  font-size: 12px;
+
+  line-height: 1.5;
+
+  color: #748391;
+}
+
+.role-card:hover {
+  transform:
+    translateY(-3px);
+
+  box-shadow:
+    0 15px 30px
+    rgba(20, 40, 70, 0.08);
+}
+
+.role-card.selected {
+  border:
+    2px solid
+    #5B5CE2;
+
+  background:
+    #F6F6FF;
+
+  box-shadow:
+    0 10px 30px
+    rgba(91, 92, 226, 0.12);
+}
+
+
+/* INPUTS */
+
+.login-input {
+  margin-bottom: 20px;
+}
+
+.login-input label {
+  display: block;
+
+  font-size: 13px;
+
+  font-weight: 600;
+
+  color: #243545;
+
+  margin-bottom: 8px;
+}
+
+.login-input div {
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 0 15px;
+
+  height: 52px;
+
+  border:
+    1px solid
+    #E1E7EF;
+
+  border-radius: 12px;
+
+  background: white;
+}
+
+.login-input div:focus-within {
+  border-color: #5B5CE2;
+
+  box-shadow:
+    0 0 0 4px
+    rgba(91, 92, 226, 0.08);
+}
+
+.login-input svg {
+  color: #5B5CE2;
+}
+
+.login-input input {
+  width: 100%;
+
+  border: none;
+
+  outline: none;
+
+  font-size: 14px;
+
+  background: transparent;
+}
+
+
+/* LOGIN BUTTON */
+
+.login-submit {
+  width: 100%;
+
+  height: 54px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 10px;
+
+  border: none;
+
+  border-radius: 12px;
+
+  cursor: pointer;
+
+  font-size: 15px;
+
+  font-weight: 600;
+
+  color: white;
+
+  background:
+    linear-gradient(
+      135deg,
+      #5B5CE2,
+      #4647C9
+    );
+
+  transition: 0.25s;
+
+  margin-top: 10px;
+}
+
+.login-submit:hover {
+  transform:
+    translateY(-2px);
+
+  box-shadow:
+    0 12px 25px
+    rgba(91, 92, 226, 0.25);
+}
+
+
+/* MOBILE */
+
+@media (max-width: 850px) {
+
+  .login-page {
+    grid-template-columns: 1fr;
+  }
+
+  .login-brand-section {
+    padding: 45px 30px;
+  }
+
+  .login-brand h1 {
+    font-size: 38px;
+  }
+
+  .login-form-section {
+    padding: 40px 25px;
+  }
+
+}
+
+@media (max-width: 500px) {
+
+  .role-selection {
+    grid-template-columns: 1fr;
+  }
+
+}
+/* REGISTER PAGE */
+
+.register-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 15px;
+}
+
+.login-register-link {
+  text-align: center;
+  margin-top: 22px;
+  font-size: 14px;
+  color: #748391;
+}
+
+.login-register-link button {
+  border: none;
+  background: transparent;
+  color: #5B5CE2;
+  font-weight: 700;
+  cursor: pointer;
+  margin-left: 6px;
+  font-size: 14px;
+}
+
+.login-register-link button:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .register-grid {
+    grid-template-columns: 1fr;
+  }
 }

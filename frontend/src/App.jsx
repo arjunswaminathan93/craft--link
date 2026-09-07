@@ -1,4 +1,4 @@
-import {useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 
 import {
   LayoutDashboard,
@@ -32,10 +32,16 @@ import {
   ImagePlus,
   Heart,
 } from "lucide-react";
-
+import Login from "./login";
+import Register from "./register";
 import "./App.css";
 
-function App() {
+
+  function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return localStorage.getItem("isLoggedIn") === "true";
+  });
+  const [showRegister, setShowRegister] = useState(false);
   const [activeMenu, setActiveMenu] = useState("Dashboard");
   const [showAI, setShowAI] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
@@ -59,7 +65,29 @@ function App() {
   const [accountName, setAccountName] = useState(
       () => localStorage.getItem("accountName") || "Ravi Verma"
   );
-
+const [pricingItems, setPricingItems] = useState([
+  {
+    product: "Handwoven Cotton Saree",
+    current: 2750,
+    suggested: 3100,
+    demand: "High",
+    confidence: "92%",
+  },
+  {
+    product: "Traditional Brass Lamp",
+    current: 3400,
+    suggested: 3650,
+    demand: "Medium",
+    confidence: "88%",
+  },
+  {
+    product: "Silver Jewellery",
+    current: 1850,
+    suggested: 2100,
+    demand: "High",
+    confidence: "90%",
+  },
+]);
   const buyerMenuItems = [
     { name: "Dashboard", icon: <LayoutDashboard size={21} /> },
     { name: "Discover Products", icon: <ShoppingBag size={21} /> },
@@ -129,6 +157,7 @@ const loadProducts = async () => {
         price: product.price,
         quantity: product.quantity,
         image: product.image_url || "",
+        artisan_id: product.artisan_id || null,
         artisan: "Your Artisan Store",
         location: "Tamil Nadu",
         emoji: "✨",
@@ -144,6 +173,8 @@ const loadProducts = async () => {
 
 const loadOrders = async () => {
   try {
+    setOrdersLoading(true);
+
     const response = await fetch("http://localhost:5000/api/orders");
 
     if (!response.ok) {
@@ -152,30 +183,118 @@ const loadOrders = async () => {
 
     const result = await response.json();
 
-    console.log("Orders from backend:", result);
-
     if (result.success) {
       const formattedOrders = result.data.map((order) => ({
-        id: `#CL-${order.id.slice(0, 5).toUpperCase()}`,
-        customer: order.buyer_id || "Guest Customer",
-        item: "Product Order",
-        amount: `₹${Number(order.total_amount).toLocaleString("en-IN")}`,
+        id: order.id,
+        buyer_id: order.buyer_id,
+        artisan_id: order.artisan_id,
+        product_id: order.product_id,
+
+        productName: order.products?.name || "Unknown Product",
+        productImage: order.products?.image_url || "",
+        productCategory: order.products?.category || "General",
+        productPrice: order.products?.price || 0,
+
+        quantity: order.quantity || 1,
+        total_amount: Number(order.total_amount || 0),
+
         status: order.status || "Pending",
+        created_at: order.created_at,
+
         date: new Date(order.created_at).toLocaleDateString("en-IN", {
           day: "2-digit",
           month: "short",
           year: "numeric",
         }),
-        quantity: order.quantity,
-        productId: order.product_id,
       }));
-
-      console.log("Formatted orders:", formattedOrders);
 
       setOrders(formattedOrders);
     }
   } catch (error) {
     console.error("Failed to load orders:", error);
+  } finally {
+    setOrdersLoading(false);
+  }
+};
+
+const getLocalDemoId = (key) => {
+  let id = localStorage.getItem(key);
+
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(key, id);
+  }
+
+  return id;
+};
+
+const placeOrder = async () => {
+  if (!selectedProduct) return;
+
+  const availableQuantity = Number(selectedProduct.quantity || 0);
+  const quantity = Number(orderQuantity);
+  const unitPrice = Number(selectedProduct.price || 0);
+
+  if (!selectedProduct.id) {
+    alert("This product does not have a valid product ID.");
+    return;
+  }
+
+  if (!quantity || quantity < 1) {
+    alert("Please select at least 1 unit.");
+    return;
+  }
+
+  if (quantity > availableQuantity) {
+    alert(`Only ${availableQuantity} units are available.`);
+    return;
+  }
+
+  if (!unitPrice) {
+    alert("This product does not have a valid price.");
+    return;
+  }
+
+  setPlacingOrder(true);
+
+  try {
+    const buyerId = getLocalDemoId("craftlinkBuyerId");
+    const artisanId =
+      selectedProduct.artisan_id ||
+      getLocalDemoId(`craftlinkArtisanId_${selectedProduct.id}`);
+
+    const response = await fetch("http://localhost:5000/api/orders", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        buyer_id: buyerId,
+        artisan_id: artisanId,
+        product_id: selectedProduct.id,
+        quantity,
+        total_amount: unitPrice * quantity,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || "Failed to place order");
+    }
+
+    alert("Order placed successfully! 🎉");
+
+    setSelectedProduct(null);
+    setOrderQuantity(1);
+
+    await loadOrders();
+    setActiveMenu("Orders");
+  } catch (error) {
+    console.error("PLACE ORDER ERROR:", error);
+    alert(error.message || "Failed to place order.");
+  } finally {
+    setPlacingOrder(false);
   }
 };
 
@@ -187,8 +306,11 @@ useEffect(() => {
 
   const [showProductForm, setShowProductForm] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [orderQuantity, setOrderQuantity] = useState(1);
+const [placingOrder, setPlacingOrder] = useState(false);
 const [productImagePreview, setProductImagePreview] = useState("");
 const [orders, setOrders] = useState([]);
+const [ordersLoading, setOrdersLoading] = useState(true);
   const [orderFilter, setOrderFilter] = useState("All");
   const [chatInput, setChatInput] = useState("");
   const [selectedOpportunity, setSelectedOpportunity] = useState(null);
@@ -1574,7 +1696,10 @@ const deleteProduct = async (id) => {
                   <button
                     type="button"
                     className="product-details-btn"
-                    onClick={() => setSelectedProduct(product)}
+                    onClick={() => {
+                      setOrderQuantity(1);
+                      setSelectedProduct(product);
+                    }}
                   >
                     <Eye size={17} /> View Details
                   </button>
@@ -1591,6 +1716,190 @@ const deleteProduct = async (id) => {
             );
           })}
         </div>
+
+        {selectedProduct && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 99999,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "20px",
+              background: "rgba(10, 20, 35, 0.58)",
+              backdropFilter: "blur(4px)",
+            }}
+            onClick={() => {
+              setSelectedProduct(null);
+              setOrderQuantity(1);
+            }}
+          >
+            <div
+              style={{
+                width: "min(760px, 100%)",
+                maxHeight: "90vh",
+                overflowY: "auto",
+                background: "#ffffff",
+                borderRadius: "24px",
+                boxShadow: "0 30px 80px rgba(15, 23, 42, 0.25)",
+                padding: "28px",
+                position: "relative",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedProduct(null);
+                  setOrderQuantity(1);
+                }}
+                style={{
+                  position: "absolute",
+                  top: "16px",
+                  right: "16px",
+                  width: "38px",
+                  height: "38px",
+                  border: "none",
+                  borderRadius: "50%",
+                  background: "#f1f5f9",
+                  color: "#475569",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <X size={20} />
+              </button>
+
+              <div style={{ display: "grid", gridTemplateColumns: "minmax(180px, 0.9fr) minmax(0, 1.3fr)", gap: "26px", alignItems: "start" }}>
+                <div
+                  style={{
+                    minHeight: "260px",
+                    borderRadius: "18px",
+                    background: "linear-gradient(135deg, #eef2ff, #e8fafc)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    overflow: "hidden",
+                  }}
+                >
+                  {selectedProduct.image ? (
+                    <img
+                      src={selectedProduct.image}
+                      alt={selectedProduct.name}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  ) : (
+                    <div style={{ fontSize: "72px" }}>{selectedProduct.emoji || "✨"}</div>
+                  )}
+                </div>
+
+                <div>
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      padding: "6px 10px",
+                      borderRadius: "999px",
+                      background: "#f0f0ff",
+                      color: "#4b4cc9",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      marginBottom: "12px",
+                    }}
+                  >
+                    {selectedProduct.category}
+                  </div>
+
+                  <h2 style={{ margin: "0 40px 8px 0", color: "#162033", fontSize: "28px" }}>
+                    {selectedProduct.name}
+                  </h2>
+
+                  <p style={{ margin: "0 0 16px", color: "#64748b", lineHeight: 1.6 }}>
+                    {selectedProduct.artisan} • {selectedProduct.location}
+                  </p>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "18px" }}>
+                    <div style={{ padding: "14px", border: "1px solid #e5e7eb", borderRadius: "14px" }}>
+                      <span style={{ display: "block", color: "#64748b", fontSize: "12px", marginBottom: "5px" }}>Price / unit</span>
+                      <strong style={{ color: "#162033", fontSize: "20px" }}>₹{Number(selectedProduct.price || 0).toLocaleString("en-IN")}</strong>
+                    </div>
+                    <div style={{ padding: "14px", border: "1px solid #e5e7eb", borderRadius: "14px" }}>
+                      <span style={{ display: "block", color: "#64748b", fontSize: "12px", marginBottom: "5px" }}>Available</span>
+                      <strong style={{ color: "#162033", fontSize: "20px" }}>{selectedProduct.quantity} units</strong>
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: "16px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                      <strong style={{ color: "#334155" }}>Quantity</strong>
+                      <span style={{ color: "#64748b", fontSize: "13px" }}>{selectedProduct.quantity} max</span>
+                    </div>
+
+                    <div style={{ display: "inline-flex", alignItems: "center", border: "1px solid #dbe3ea", borderRadius: "12px", overflow: "hidden" }}>
+                      <button
+                        type="button"
+                        onClick={() => setOrderQuantity((current) => Math.max(1, current - 1))}
+                        style={{ width: "42px", height: "42px", border: "none", background: "#f8fafc", cursor: "pointer", fontSize: "20px", color: "#334155" }}
+                      >
+                        −
+                      </button>
+                      <strong style={{ minWidth: "48px", textAlign: "center", color: "#162033" }}>{orderQuantity}</strong>
+                      <button
+                        type="button"
+                        onClick={() => setOrderQuantity((current) => Math.min(Number(selectedProduct.quantity || 1), current + 1))}
+                        style={{ width: "42px", height: "42px", border: "none", background: "#f8fafc", cursor: "pointer", fontSize: "20px", color: "#334155" }}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 0", borderTop: "1px solid #edf1f4", borderBottom: "1px solid #edf1f4", marginBottom: "18px" }}>
+                    <span style={{ color: "#64748b", fontWeight: 600 }}>Total Amount</span>
+                    <strong style={{ color: "#202a42", fontSize: "24px" }}>
+                      ₹{(Number(selectedProduct.price || 0) * orderQuantity).toLocaleString("en-IN")}
+                    </strong>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedProduct(null);
+                        setOrderQuantity(1);
+                      }}
+                      style={{
+                        padding: "12px 18px",
+                        border: "1px solid #dbe3ea",
+                        borderRadius: "11px",
+                        background: "#ffffff",
+                        color: "#475569",
+                        cursor: "pointer",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={placingOrder}
+                      onClick={placeOrder}
+                      className="dashboard-post-btn"
+                      style={{ opacity: placingOrder ? 0.7 : 1 }}
+                    >
+                      <ShoppingBag size={18} />
+                      {placingOrder ? "Placing Order..." : "Place Order"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {filteredProducts.length === 0 && (
           <div className="empty-state discover-empty-state">
@@ -1653,195 +1962,232 @@ const deleteProduct = async (id) => {
   };
 
   const renderDynamicPricing = () => {
-    const pricingItems = [
-      { product: "Handwoven Cotton Saree", current: 2750, suggested: 3100, demand: "High", confidence: "92%" },
-      { product: "Traditional Brass Lamp", current: 3400, suggested: 3650, demand: "Medium", confidence: "88%" },
-      { product: "Silver Jewellery", current: 1850, suggested: 2100, demand: "High", confidence: "90%" },
-    ];
-
-    return (
-      <div className="page-container" style={{ display: "block" }}>
-        <div className="dashboard-welcome" style={{ marginBottom: 24 }}>
-          <div>
-            <p className="dashboard-label">AI PRICING ENGINE</p>
-            <h2>Dynamic Pricing</h2>
-            <p className="dashboard-subtitle">AI suggestions based on demand, category and marketplace activity.</p>
-          </div>
-          <div className="ai-match-badge"><TrendingUp size={18} /> Live Insights</div>
-        </div>
-
-        <div className="pricing-grid">
-          {pricingItems.map((item, index) => (
-            <div className="pricing-card" key={index}>
-              <div className="pricing-card-head">
-                <div>
-                  <span>PRODUCT</span>
-                  <h3>{item.product}</h3>
-                </div>
-                <div className={`demand-badge ${item.demand.toLowerCase()}`}>{item.demand} Demand</div>
-              </div>
-              <div className="pricing-values">
-                <div><span>Current Price</span><strong>₹{item.current}</strong></div>
-                <div className="suggested-price"><span>AI Suggested</span><strong>₹{item.suggested}</strong></div>
-              </div>
-              <div className="price-range">
-                <div className="price-range-line"><span /><span /></div>
-                <p>Confidence score: <b>{item.confidence}</b></p>
-              </div>
-              <button className="product-contact-btn" onClick={() => alert(`AI suggested price of ₹${item.suggested} applied in demo mode.`)}>
-                <Sparkles size={17} /> Apply AI Price
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
+  const applyAIPrice = (productName) => {
+    setPricingItems((currentItems) =>
+      currentItems.map((item) =>
+        item.product === productName
+          ? {
+              ...item,
+              current: item.suggested,
+            }
+          : item
+      )
     );
   };
 
- const renderOrders = () => {
-  const orders = [
-    {}
-  ];
-
-  const filtered =
-    orderFilter === "All"
-      ? orders
-      : orders.filter((o) => o.status === orderFilter);
-
   return (
     <div className="page-container" style={{ display: "block" }}>
-      
       <div className="dashboard-welcome" style={{ marginBottom: 24 }}>
         <div>
-          <p className="dashboard-label">MARKETPLACE OPERATIONS</p>
-          <h2>Orders</h2>
-          <p className="dashboard-subtitle">
-            Track your active marketplace orders and delivery progress.
-          </p>
+          <p className="dashboard-label">AI-POWERED PRICING</p>
+          <h2>Dynamic Pricing</h2>
+          <p className="dashboard-subtitle">Use AI recommendations to keep your product pricing competitive.</p>
         </div>
       </div>
-
-      <div className="order-tabs">
-        {["All", "Pending", "Processing", "Delivered"].map((tab) => (
-          <button
-            key={tab}
-            className={
-              orderFilter === tab ? "active-order-tab" : ""
-            }
-            onClick={() => setOrderFilter(tab)}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      <div className="orders-list">
-        {filtered.map((order) => (
-          <div className="order-card-new" key={order.id}>
-
-            <div className="order-id">
-              <Package size={22} />
-              <div>
-                <strong>{order.id}</strong>
-                <span>{order.date}</span>
-              </div>
-            </div>
-
+      <div className="pricing-table">
+        {pricingItems.map((item) => (
+          <div className="pricing-row" key={item.product}>
             <div>
-              <span>Customer</span>
-              <strong>{order.customer}</strong>
+              <strong>{item.product}</strong>
+              <span>{item.demand} demand · {item.confidence} confidence</span>
             </div>
-
-            <div>
-              <span>Order Item</span>
-              <strong>{order.item}</strong>
-            </div>
-
-            <div>
-              <span>Amount</span>
-              <strong>{order.amount}</strong>
-            </div>
-
-            <div className={`order-status ${(order.status || "Pending").toLowerCase()}`}>
-              {order.status}
-            </div>
-
-            <button
-              onClick={() => setSelectedOrder(order)}
-            >
-              <Eye size={17} /> View
-            </button>
-
+            <span>₹{Number(item.current).toLocaleString("en-IN")}</span>
+            <strong>₹{Number(item.suggested).toLocaleString("en-IN")}</strong>
+            <button type="button" onClick={() => applyAIPrice(item.product)}>Apply AI Price</button>
           </div>
         ))}
       </div>
-
-
-      {/* ORDER DETAILS POPUP */}
-
-      {selectedOrder && (
-        <div
-          className="modal-overlay"
-          onClick={() => setSelectedOrder(null)}
-        >
-          <div
-            className="details-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-
-            <button
-              className="modal-close"
-              onClick={() => setSelectedOrder(null)}
-            >
-              ×
-            </button>
-
-            <p className="dashboard-label">
-              ORDER DETAILS
-            </p>
-
-            <h2>{selectedOrder.id}</h2>
-
-            <div className="details-row">
-              <strong>Customer</strong>
-              <span>{selectedOrder.customer}</span>
-            </div>
-
-            <div className="details-row">
-              <strong>Order Item</strong>
-              <span>{selectedOrder.item}</span>
-            </div>
-
-            <div className="details-row">
-              <strong>Amount</strong>
-              <span>{selectedOrder.amount}</span>
-            </div>
-
-            <div className="details-row">
-              <strong>Status</strong>
-              <span>{selectedOrder.status}</span>
-            </div>
-
-            <div className="details-row">
-              <strong>Order Date</strong>
-              <span>{selectedOrder.date}</span>
-            </div>
-
-            <button
-              className="primary-action"
-              style={{ width: "100%", marginTop: "20px" }}
-              onClick={() => setSelectedOrder(null)}
-            >
-              Close
-            </button>
-
-          </div>
-        </div>
-      )}
-
     </div>
   );
 };
+
+  const renderOrders = () => (
+    <div className="page-container" style={{ display: "block" }}>
+      <div className="dashboard-welcome" style={{ marginBottom: 24 }}>
+        <div>
+          <p className="dashboard-label">ORDER MANAGEMENT</p>
+          <h2>Orders</h2>
+          <p className="dashboard-subtitle">Track your marketplace orders in one place.</p>
+        </div>
+      </div>
+      {ordersLoading ? (
+        <div className="empty-state"><p>Loading orders...</p></div>
+      ) : orders.length === 0 ? (
+        <div className="empty-state"><p>No orders found.</p></div>
+      ) : (
+        <div className="orders-list">
+          {orders.map((order) => (
+            <div className="order-card" key={order.id}>
+              <div className="order-details">
+                <div className="order-product-preview">
+                  {order.productImage ? <img src={order.productImage} alt={order.productName} /> : <div className="product-emoji">📦</div>}
+                  <div>
+                    <span>Product</span>
+                    <strong>{order.productName || "Unknown Product"}</strong>
+                    <small>{order.productCategory || "General"}</small>
+                  </div>
+                </div>
+                <div className="order-detail-item"><span>Quantity</span><strong>{order.quantity || 0} Units</strong></div>
+                <div className="order-detail-item"><span>Total Amount</span><strong>₹{Number(order.total_amount || 0).toLocaleString("en-IN")}</strong></div>
+              </div>
+              <div className="order-card-footer">
+                <span>{order.status} · {order.date || "Date unavailable"}</span>
+                <button type="button" className="product-contact-btn" onClick={() => setSelectedOrder(order)}><Eye size={17} /> View Order</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {selectedOrder && (
+        <div className="modal-overlay" onClick={() => setSelectedOrder(null)}>
+          <div className="details-modal" onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="modal-close" onClick={() => setSelectedOrder(null)}>×</button>
+            <p className="dashboard-label">ORDER DETAILS</p>
+            <h2>{selectedOrder.id}</h2>
+            <div className="details-row"><strong>Product</strong><span>{selectedOrder.productName}</span></div>
+            <div className="details-row"><strong>Quantity</strong><span>{selectedOrder.quantity} Units</span></div>
+            <div className="details-row"><strong>Amount</strong><span>₹{Number(selectedOrder.total_amount || 0).toLocaleString("en-IN")}</span></div>
+            <div className="details-row"><strong>Status</strong><span>{selectedOrder.status}</span></div>
+            <div className="details-row"><strong>Order Date</strong><span>{selectedOrder.date || "Date unavailable"}</span></div>
+            <button type="button" className="primary-action" style={{ width: "100%", marginTop: "20px" }} onClick={() => setSelectedOrder(null)}>Close</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* OLD CORRUPTED ORDER JSX REMOVED
+    <div
+  className="order-details"
+  style={{
+    display: "grid",
+    gridTemplateColumns: "minmax(220px, 1.6fr) 1fr 1fr",
+    gap: "18px",
+    alignItems: "center",
+  }}
+>
+  <div
+    className="order-product-preview"
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: "14px",
+    }}
+  >
+    <div
+      style={{
+        width: "72px",
+        height: "72px",
+        borderRadius: "12px",
+        overflow: "hidden",
+        background: "#f3f4f6",
+        flexShrink: 0,
+      }}
+    >
+      {order.productImage ? (
+        <img
+          src={order.productImage}
+          alt={order.productName}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+          }}
+        />
+      ) : (
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "28px",
+          }}
+        >
+          📦
+        </div>
+      )}
+    </div>
+
+    <div>
+      <span
+        style={{
+          display: "block",
+          fontSize: "12px",
+          color: "#777",
+          marginBottom: "4px",
+        }}
+      >
+        Product
+      </span>
+
+      <strong
+        style={{
+          display: "block",
+          fontSize: "16px",
+          marginBottom: "4px",
+        }}
+      >
+        {order.productName || "Unknown Product"}
+      </strong>
+
+      <span
+        style={{
+          fontSize: "13px",
+          color: "#777",
+        }}
+      >
+        {order.productCategory || "General"}
+      </span>
+    </div>
+  </div>
+
+  <div className="order-detail-item">
+    <span>Quantity</span>
+    <strong>{order.quantity || 0} Units</strong>
+  </div>
+
+  <div className="order-detail-item">
+    <span>Total Amount</span>
+    <strong>
+      ₹{Number(order.total_amount || 0).toLocaleString("en-IN")}
+    </strong>
+  </div>
+</div>
+              <div className="order-card-footer">
+                <button
+                  className="product-contact-btn"
+                  onClick={() => setSelectedOrder(order)}
+                >
+                  <Eye size={17} />
+                  View Order
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {selectedOrder && (
+        <div className="modal-overlay" onClick={() => setSelectedOrder(null)}>
+          <div className="details-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setSelectedOrder(null)}>×</button>
+            <p className="dashboard-label">ORDER DETAILS</p>
+            <h2>{selectedOrder.id}</h2>
+            <div className="details-row"><strong>Product</strong><span>{selectedOrder.product_id}</span></div>
+            <div className="details-row"><strong>Quantity</strong><span>{selectedOrder.quantity} Units</span></div>
+            <div className="details-row"><strong>Amount</strong><span>₹{Number(selectedOrder.total_amount || 0).toLocaleString("en-IN")}</span></div>
+            <div className="details-row"><strong>Status</strong><span>{selectedOrder.status}</span></div>
+            <div className="details-row"><strong>Order Date</strong><span>{selectedOrder.created_at ? new Date(selectedOrder.created_at).toLocaleDateString("en-IN") : "Date unavailable"}</span></div>
+            <button className="primary-action" style={{ width: "100%", marginTop: "20px" }} onClick={() => setSelectedOrder(null)}>Close</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}; */
   const renderMessages = () => {
     const chats = [
       { name: "Meera Handlooms", role: "Artisan", initials: "MH" },
@@ -2473,7 +2819,62 @@ const deleteProduct = async (id) => {
         return renderDashboard();
     }
   };
+if (!isLoggedIn && showRegister) {
+  return (
+    <Register
+      onRegister={(role, formData) => {
+        const userRole =
+          role === "artisan" ? "Artisan" : "Buyer";
 
+        setAccountRole(userRole);
+        setAccountName(formData.name);
+
+        localStorage.setItem("accountRole", userRole);
+        localStorage.setItem("accountName", formData.name);
+        localStorage.setItem("isLoggedIn", "true");
+
+        alert("Account created successfully!");
+
+        setShowRegister(false);
+        setIsLoggedIn(true);
+        setActiveMenu("Dashboard");
+      }}
+
+      onBackToLogin={() => {
+        setShowRegister(false);
+      }}
+    />
+  );
+}
+
+if (!isLoggedIn) {
+  return (
+    <Login
+      onLogin={(role, email) => {
+        const userRole =
+          role === "artisan" ? "Artisan" : "Buyer";
+
+        const userName =
+          email.split("@")[0] ||
+          (role === "artisan" ? "Artisan" : "Buyer");
+
+        setAccountRole(userRole);
+        setAccountName(userName);
+
+        localStorage.setItem("accountRole", userRole);
+        localStorage.setItem("accountName", userName);
+        localStorage.setItem("isLoggedIn", "true");
+
+        setIsLoggedIn(true);
+        setActiveMenu("Dashboard");
+      }}
+
+      onRegister={() => {
+        setShowRegister(true);
+      }}
+    />
+  );
+}
   return (
     <div className="app">
       {/* SIDEBAR */}
@@ -2704,12 +3105,14 @@ const deleteProduct = async (id) => {
                   type="button"
                   className="account-settings-btn"
                   onClick={() => {
+                    localStorage.removeItem("isLoggedIn");
+                    setIsLoggedIn(false);
                     setActiveMenu("Settings");
                     setShowAccountMenu(false);
                   }}
                 >
-                  <Settings size={18} />
-                  Account Settings
+                  <X size={18} />
+                  Sign Out
                 </button>
               </div>
             )}
@@ -2734,18 +3137,14 @@ const deleteProduct = async (id) => {
 
       {/* AI CHAT */}
 
-      {showAI && (
+            {showAI && (
         <div className="ai-chat">
           <div className="ai-chat-top">
-            <strong>
-              CraftLink AI
-            </strong>
+            <strong>CraftLink AI</strong>
 
             <button
               type="button"
-              onClick={() =>
-                setShowAI(false)
-              }
+              onClick={() => setShowAI(false)}
             >
               <X size={18} />
             </button>
@@ -2761,9 +3160,8 @@ const deleteProduct = async (id) => {
             placeholder="Ask CraftLink AI..."
           />
         </div>
-      )}
+            )}
     </div>
   );
-}
 
 export default App;

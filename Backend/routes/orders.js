@@ -2,25 +2,29 @@ const express = require("express");
 const router = express.Router();
 const supabase = require("../supabase");
 
-// GET all orders
+// GET all orders with product details
 router.get("/", async (req, res) => {
-  console.log("🔥 GETTING ORDERS FROM SUPABASE 🔥");
-
   try {
     const { data, error } = await supabase
       .from("orders")
-      .select("*")
+      .select(`
+        *,
+        products (
+          id,
+          name,
+          price,
+          image_url,
+          category
+        )
+      `)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-
-    console.log("ORDERS DATA:", data);
 
     res.json({
       success: true,
       data,
     });
-
   } catch (error) {
     console.error("GET ORDERS ERROR:", error);
 
@@ -30,22 +34,23 @@ router.get("/", async (req, res) => {
     });
   }
 });
-
-// ADD new order
+// CREATE new order
 router.post("/", async (req, res) => {
   try {
     const {
-      product_name,
-      buyer_name,
+      product_id,
       quantity,
-      total_price,
-      status,
+      total_amount,
     } = req.body;
 
-    if (!product_name || !buyer_name || !quantity || !total_price) {
+    if (
+      !product_id ||
+      !quantity ||
+      !total_amount
+    ) {
       return res.status(400).json({
         success: false,
-        message: "All order details are required",
+        message: "Product, quantity and total amount are required",
       });
     }
 
@@ -53,11 +58,10 @@ router.post("/", async (req, res) => {
       .from("orders")
       .insert([
         {
-          product_name,
-          buyer_name,
+          product_id,
           quantity,
-          total_price,
-          status: status || "Pending",
+          total_amount,
+          status: "Pending",
         },
       ])
       .select();
@@ -71,7 +75,38 @@ router.post("/", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("POST ORDER ERROR:", error);
+    console.error("CREATE ORDER ERROR:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+
+// UPDATE order status
+router.put("/:id/status", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const { data, error } = await supabase
+      .from("orders")
+      .update({ status })
+      .eq("id", id)
+      .select();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      message: "Order status updated",
+      data,
+    });
+
+  } catch (error) {
+    console.error("UPDATE ORDER ERROR:", error);
 
     res.status(500).json({
       success: false,
