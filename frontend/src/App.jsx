@@ -139,7 +139,7 @@ const [pricingItems, setPricingItems] = useState([
 }, [accountRole, accountName]);
 const loadProducts = async () => {
   try {
-    const response = await fetch("http://localhost:5000/api/products");
+    const response = await fetch("https://craft-link-s9ua.onrender.com");
 
     if (!response.ok) {
       throw new Error("Failed to fetch products");
@@ -175,7 +175,7 @@ const loadOrders = async () => {
   try {
     setOrdersLoading(true);
 
-    const response = await fetch("http://localhost:5000/api/orders");
+    const response = await fetch("https://craft-link-s9ua.onrender.com/api/orders");
 
     if (!response.ok) {
       throw new Error("Failed to fetch orders");
@@ -229,7 +229,7 @@ const getLocalDemoId = (key) => {
 };
 
 const createProfile = async ({ name, role, email, phone, state, city }) => {
-  const response = await fetch("http://localhost:5000/api/profiles", {
+  const response = await fetch("https://craft-link-s9ua.onrender.com/api/profiles", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -295,7 +295,7 @@ const placeOrder = async () => {
       return;
     }
 
-    const response = await fetch("http://localhost:5000/api/orders", {
+    const response = await fetch("https://craft-link-s9ua.onrender.com/api/orders", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1243,7 +1243,7 @@ if (productForm.image instanceof File) {
   formData.append("image", productForm.image);
 
   const uploadResponse = await fetch(
-    "http://localhost:5000/api/products/upload",
+    "https://craft-link-s9ua.onrender.com/api/products/upload",
     {
       method: "POST",
       body: formData,
@@ -1269,8 +1269,8 @@ if (productForm.image instanceof File) {
     }
 
     const url = isEditing
-      ? `http://localhost:5000/api/products/${productForm.id}`
-      : "http://localhost:5000/api/products";
+      ? `https://craft-link-s9ua.onrender.com/api/products/${productForm.id}`
+      : "https://craft-link-s9ua.onrender.com/api/products";
 
     console.log("Sending request to:", url);
 
@@ -1339,7 +1339,7 @@ const deleteProduct = async (id) => {
 
   try {
     const response = await fetch(
-      `http://localhost:5000/api/products/${id}`,
+      https://craft-link-s9ua.onrender.com/${id}`,
       {
         method: "DELETE",
       }
