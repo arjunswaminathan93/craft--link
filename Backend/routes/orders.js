@@ -2,7 +2,10 @@ const express = require("express");
 const router = express.Router();
 const supabase = require("../supabase");
 
-// GET all orders with product details
+/* =========================================
+   GET ALL ORDERS WITH PRODUCT DETAILS
+========================================= */
+
 router.get("/", async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -14,7 +17,8 @@ router.get("/", async (req, res) => {
           name,
           price,
           image_url,
-          category
+          category,
+          artisan_id
         )
       `)
       .order("created_at", { ascending: false });
@@ -25,6 +29,7 @@ router.get("/", async (req, res) => {
       success: true,
       data,
     });
+
   } catch (error) {
     console.error("GET ORDERS ERROR:", error);
 
@@ -34,23 +39,74 @@ router.get("/", async (req, res) => {
     });
   }
 });
-// CREATE new order
+
+
+/* =========================================
+   GET ORDERS FOR SPECIFIC ARTISAN
+========================================= */
+
+router.get("/artisan/:artisanId", async (req, res) => {
+  try {
+    const { artisanId } = req.params;
+
+    const { data, error } = await supabase
+      .from("orders")
+      .select(`
+        *,
+        products (
+          id,
+          name,
+          price,
+          image_url,
+          category,
+          artisan_id
+        )
+      `)
+      .eq("artisan_id", artisanId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      data,
+    });
+
+  } catch (error) {
+    console.error("GET ARTISAN ORDERS ERROR:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+
+/* =========================================
+   CREATE NEW ORDER
+========================================= */
+
 router.post("/", async (req, res) => {
   try {
     const {
       product_id,
+      buyer_id,
+      artisan_id,
       quantity,
       total_amount,
     } = req.body;
 
     if (
       !product_id ||
+      !artisan_id ||
       !quantity ||
       !total_amount
     ) {
       return res.status(400).json({
         success: false,
-        message: "Product, quantity and total amount are required",
+        message:
+          "Product, artisan, quantity and total amount are required",
       });
     }
 
@@ -59,6 +115,8 @@ router.post("/", async (req, res) => {
       .insert([
         {
           product_id,
+          buyer_id: buyer_id || null,
+          artisan_id,
           quantity,
           total_amount,
           status: "Pending",
@@ -85,11 +143,21 @@ router.post("/", async (req, res) => {
 });
 
 
-// UPDATE order status
+/* =========================================
+   UPDATE ORDER STATUS
+========================================= */
+
 router.put("/:id/status", async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        message: "Order status is required",
+      });
+    }
 
     const { data, error } = await supabase
       .from("orders")

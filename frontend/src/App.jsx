@@ -39,7 +39,7 @@ import "./App.css";
 
   function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return localStorage.getItem("isLoggedIn") === "true";
+    return sessionStorage.getItem("isLoggedIn") === "true";
   });
   const [showRegister, setShowRegister] = useState(false);
   const [activeMenu, setActiveMenu] = useState("Dashboard");
@@ -59,11 +59,11 @@ import "./App.css";
     publicProfile: true,
   });
   const [accountRole, setAccountRole] = useState(
-     () => localStorage.getItem("accountRole") || "Buyer"
+     () => sessionStorage.getItem("accountRole") || "Buyer"
   );
     
   const [accountName, setAccountName] = useState(
-      () => localStorage.getItem("accountName") || "Ravi Verma"
+      () => sessionStorage.getItem("accountName") || "Ravi Verma"
   );
 const [pricingItems, setPricingItems] = useState([
   {
@@ -134,8 +134,8 @@ const [pricingItems, setPricingItems] = useState([
     image: "",
   });
   useEffect(() => {
-     localStorage.setItem("accountRole", accountRole);
-  localStorage.setItem("accountName", accountName);
+     sessionStorage.setItem("accountRole", accountRole);
+  sessionStorage.setItem("accountName", accountName);
 }, [accountRole, accountName]);
 const loadProducts = async () => {
   try {
@@ -228,6 +228,35 @@ const getLocalDemoId = (key) => {
   return id;
 };
 
+const createProfile = async ({ name, role, email, phone, state, city }) => {
+  const response = await fetch("http://localhost:5000/api/profiles", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name,
+      role,
+      email: email || null,
+      phone: phone || null,
+      state: state || null,
+      city: city || null,
+    }),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || "Failed to create profile");
+  }
+
+  return result.data;
+};
+
+const getCurrentProfileId = () => {
+  return sessionStorage.getItem("craftlinkProfileId") || "";
+};
+
 const placeOrder = async () => {
   if (!selectedProduct) return;
 
@@ -259,9 +288,12 @@ const placeOrder = async () => {
 
   try {
     const buyerId = getLocalDemoId("craftlinkBuyerId");
-    const artisanId =
-      selectedProduct.artisan_id ||
-      getLocalDemoId(`craftlinkArtisanId_${selectedProduct.id}`);
+    const artisanId = selectedProduct.artisan_id;
+
+    if (!artisanId) {
+      alert("This product is not linked to an Artisan.");
+      return;
+    }
 
     const response = await fetch("http://localhost:5000/api/orders", {
       method: "POST",
@@ -1189,6 +1221,11 @@ const [ordersLoading, setOrdersLoading] = useState(true);
   );
 };
   const renderMyProducts = () => {
+    const currentArtisanId = getCurrentProfileId();
+
+    const artisanProducts = products.filter(
+      (product) => product.artisan_id === currentArtisanId
+    );
     const saveProduct = async () => {
   console.log("SAVE BUTTON CLICKED");
   console.log("PRODUCT FORM:", productForm);
@@ -1224,6 +1261,13 @@ if (productForm.image instanceof File) {
 }
     const isEditing = !!productForm.id;
 
+    const artisanId = getCurrentProfileId();
+
+    if (!artisanId) {
+      alert("Artisan profile not found. Please logout and register/login again.");
+      return;
+    }
+
     const url = isEditing
       ? `http://localhost:5000/api/products/${productForm.id}`
       : "http://localhost:5000/api/products";
@@ -1241,6 +1285,7 @@ if (productForm.image instanceof File) {
         price: Number(productForm.price),
         quantity: Number(productForm.quantity),
         image_url: uploadedImageUrl,
+        artisan_id: artisanId,
       }),
     });
 
@@ -1543,7 +1588,7 @@ const deleteProduct = async (id) => {
         )}
 
         <div className="product-grid-new">
-          {products.map((product) => (
+          {artisanProducts.map((product) => (
             <div className="market-product-card" key={product.id}>
               {product.image ? (
                 <img
@@ -2020,7 +2065,19 @@ const deleteProduct = async (id) => {
             <div className="order-card" key={order.id}>
               <div className="order-details">
                 <div className="order-product-preview">
-                  {order.productImage ? <img src={order.productImage} alt={order.productName} /> : <div className="product-emoji">📦</div>}
+                  {order.productImage ? <img src={order.productImage} alt={order.productName}  style={{
+                      width: "70px",
+                      height: "70px",
+                      minWidth: "70px",
+                      maxWidth: "70px",
+                      minHeight: "70px",
+                      maxHeight: "70px",
+                      objectFit: "cover",
+                      objectPosition: "center",
+                      borderRadius: "10px",
+                      display: "block",
+                      flexShrink: 0,
+                    }} /> : <div className="product-emoji">📦</div>}
                   <div>
                     <span>Product</span>
                     <strong>{order.productName || "Unknown Product"}</strong>
@@ -2055,7 +2112,6 @@ const deleteProduct = async (id) => {
       )}
     </div>
   );
-};
 
 /* OLD CORRUPTED ORDER JSX REMOVED
     <div
@@ -2370,7 +2426,12 @@ const deleteProduct = async (id) => {
         <div className="settings-layout">
           <div className="settings-profile-card">
             <div className={`settings-profile-avatar ${accountRole === "Artisan" ? "artisan-profile" : ""}`}>
-              {accountRole === "Buyer" ? "RV" : "AR"}
+              {accountName
+                  .split(" ")
+                  .map((part) => part[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase()}
             </div>
             <h3>{accountName}</h3>
             <p>{accountRole} Workspace</p>
@@ -2822,22 +2883,38 @@ const deleteProduct = async (id) => {
 if (!isLoggedIn && showRegister) {
   return (
     <Register
-      onRegister={(role, formData) => {
+      onRegister={async (role, formData) => {
         const userRole =
           role === "artisan" ? "Artisan" : "Buyer";
 
-        setAccountRole(userRole);
-        setAccountName(formData.name);
+        try {
+          const profile = await createProfile({
+            name: formData.name,
+            role: userRole,
+            email: formData.email,
+            phone: formData.phone,
+            state: formData.state,
+            city: formData.city,
+          });
 
-        localStorage.setItem("accountRole", userRole);
-        localStorage.setItem("accountName", formData.name);
-        localStorage.setItem("isLoggedIn", "true");
+          setAccountRole(userRole);
+          setAccountName(formData.name);
 
-        alert("Account created successfully!");
+          sessionStorage.setItem("accountRole", userRole);
+          sessionStorage.setItem("accountName", formData.name);
+          sessionStorage.setItem("craftlinkProfileId", profile.id);
+          localStorage.setItem("craftlinkProfileEmail", formData.email || "");
+          sessionStorage.setItem("isLoggedIn", "true");
 
-        setShowRegister(false);
-        setIsLoggedIn(true);
-        setActiveMenu("Dashboard");
+          alert("Account created successfully!");
+
+          setShowRegister(false);
+          setIsLoggedIn(true);
+          setActiveMenu("Dashboard");
+        } catch (error) {
+          console.error("REGISTER PROFILE ERROR:", error);
+          alert(error.message || "Failed to create account.");
+        }
       }}
 
       onBackToLogin={() => {
@@ -2861,9 +2938,9 @@ if (!isLoggedIn) {
         setAccountRole(userRole);
         setAccountName(userName);
 
-        localStorage.setItem("accountRole", userRole);
-        localStorage.setItem("accountName", userName);
-        localStorage.setItem("isLoggedIn", "true");
+        sessionStorage.setItem("accountRole", userRole);
+        sessionStorage.setItem("accountName", userName);
+        sessionStorage.setItem("isLoggedIn", "true");
 
         setIsLoggedIn(true);
         setActiveMenu("Dashboard");
@@ -3012,7 +3089,12 @@ if (!isLoggedIn) {
                     : ""
                 }`}
               >
-                {accountRole === "Buyer" ? "RV" : "AR"}
+                {accountName
+                  .split(" ")
+                  .map((part) => part[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase()}
               </div>
 
               <div className="profile-info">
@@ -3049,21 +3131,26 @@ if (!isLoggedIn) {
 
                 <button
                   type="button"
-                  className="account-option active-account"
+                  className={`account-option ${accountRole === "Buyer" ? "active-account" : ""}`}
                   onClick={() => {
                     setAccountRole("Buyer");
-                    setAccountName("Ravi Verma");
+                    sessionStorage.setItem("accountRole", "Buyer");
                     setActiveMenu("Dashboard");
                     setShowAccountMenu(false);
                   }}
                 >
                   <div className="account-avatar">
-                    RV
+                    {accountName
+                      .split(" ")
+                      .map((part) => part[0])
+                      .join("")
+                      .slice(0, 2)
+                      .toUpperCase()}
                   </div>
 
                   <div className="account-option-info">
                     <strong>
-                      Ravi Verma
+                      {accountName}
                     </strong>
 
                     <span>
@@ -3071,32 +3158,39 @@ if (!isLoggedIn) {
                     </span>
                   </div>
 
-                  <CheckCircle2 size={18} />
+                  {accountRole === "Buyer" && <CheckCircle2 size={18} />}
                 </button>
 
                 <button
                   type="button"
-                  className="account-option"
+                  className={`account-option ${accountRole === "Artisan" ? "active-account" : ""}`}
                   onClick={() => {
                     setAccountRole("Artisan");
-                    setAccountName("Artisan Workspace");
+                    sessionStorage.setItem("accountRole", "Artisan");
                     setActiveMenu("Dashboard");
                     setShowAccountMenu(false);
                   }}
                 >
                   <div className="account-avatar artisan-avatar">
-                    AR
+                    {accountName
+                      .split(" ")
+                      .map((part) => part[0])
+                      .join("")
+                      .slice(0, 2)
+                      .toUpperCase()}
                   </div>
 
                   <div className="account-option-info">
                     <strong>
-                      Artisan Workspace
+                      {accountName}
                     </strong>
 
                     <span>
-                      Switch to Artisan
+                      Artisan Account
                     </span>
                   </div>
+
+                  {accountRole === "Artisan" && <CheckCircle2 size={18} />}
                 </button>
 
                 <div className="account-dropdown-line" />
@@ -3105,7 +3199,7 @@ if (!isLoggedIn) {
                   type="button"
                   className="account-settings-btn"
                   onClick={() => {
-                    localStorage.removeItem("isLoggedIn");
+                    sessionStorage.removeItem("isLoggedIn");
                     setIsLoggedIn(false);
                     setActiveMenu("Settings");
                     setShowAccountMenu(false);
@@ -3160,8 +3254,9 @@ if (!isLoggedIn) {
             placeholder="Ask CraftLink AI..."
           />
         </div>
-            )}
+      )}
     </div>
   );
+}
 
 export default App;

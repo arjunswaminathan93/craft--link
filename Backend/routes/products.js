@@ -9,13 +9,25 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024,
   },
 });
-// GET all products
-// GET all products
+
+
+/* =========================================
+   GET ALL PRODUCTS
+========================================= */
+
 router.get("/", async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("products")
-      .select("id,name,category,price,quantity,image_url")
+      .select(`
+        id,
+        name,
+        category,
+        price,
+        quantity,
+        image_url,
+        artisan_id
+      `)
       .limit(50);
 
     if (error) throw error;
@@ -24,6 +36,7 @@ router.get("/", async (req, res) => {
       success: true,
       data,
     });
+
   } catch (error) {
     console.error("GET PRODUCTS ERROR:", error);
 
@@ -33,9 +46,14 @@ router.get("/", async (req, res) => {
     });
   }
 });
-// ADD new product
+
+
+/* =========================================
+   ADD NEW PRODUCT
+========================================= */
+
 router.post("/", async (req, res) => {
-  console.log("POST REQUEST RECEIVED");
+  console.log("POST PRODUCT REQUEST RECEIVED");
 
   try {
     const {
@@ -44,12 +62,20 @@ router.post("/", async (req, res) => {
       price,
       quantity,
       image_url,
+      artisan_id,
     } = req.body;
 
-    if (!name || !category || !price || !quantity) {
+    if (
+      !name ||
+      !category ||
+      !price ||
+      !quantity ||
+      !artisan_id
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Name, category, price and quantity are required",
+        message:
+          "Name, category, price, quantity and artisan ID are required",
       });
     }
 
@@ -62,6 +88,7 @@ router.post("/", async (req, res) => {
           price,
           quantity,
           image_url,
+          artisan_id,
         },
       ])
       .select();
@@ -85,7 +112,10 @@ router.post("/", async (req, res) => {
 });
 
 
-// UPDATE product
+/* =========================================
+   UPDATE PRODUCT
+========================================= */
+
 router.put("/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -96,6 +126,7 @@ router.put("/:id", async (req, res) => {
       price,
       quantity,
       image_url,
+      artisan_id,
     } = req.body;
 
     const { data, error } = await supabase
@@ -106,6 +137,7 @@ router.put("/:id", async (req, res) => {
         price,
         quantity,
         image_url,
+        artisan_id,
       })
       .eq("id", id)
       .select();
@@ -129,7 +161,10 @@ router.put("/:id", async (req, res) => {
 });
 
 
-// DELETE product
+/* =========================================
+   DELETE PRODUCT
+========================================= */
+
 router.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -155,7 +190,12 @@ router.delete("/:id", async (req, res) => {
     });
   }
 });
-// UPLOAD PRODUCT IMAGE
+
+
+/* =========================================
+   UPLOAD PRODUCT IMAGE
+========================================= */
+
 router.post("/upload", upload.single("image"), async (req, res) => {
   try {
     if (!req.file) {
@@ -194,4 +234,6 @@ router.post("/upload", upload.single("image"), async (req, res) => {
     });
   }
 });
+
+
 module.exports = router;
