@@ -1339,13 +1339,13 @@ const deleteProduct = async (id) => {
 
   try {
     const response = await fetch(
-      https://craft-link-s9ua.onrender.com/${id}`,
+      `https://craft-link-s9ua.onrender.com/api/products/${id}`,
       {
         method: "DELETE",
       }
     );
 
-    const result = await response.json();
+   const result = await response.json();
 
     if (!response.ok || !result.success) {
       alert(result.message || "Failed to delete product");
