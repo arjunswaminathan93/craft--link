@@ -65,6 +65,24 @@ import "./App.css";
   const [accountName, setAccountName] = useState(
       () => sessionStorage.getItem("accountName") || "Ravi Verma"
   );
+
+  const getInitials = (name) => {
+    return (name || "User")
+      .split(" ")
+      .filter(Boolean)
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+  };
+
+  const buyerAccountName =
+    sessionStorage.getItem("buyerAccountName") ||
+    (accountRole === "Buyer" ? accountName : "Buyer");
+
+  const artisanAccountName =
+    sessionStorage.getItem("artisanAccountName") ||
+    (accountRole === "Artisan" ? accountName : "Artisan");
 const [pricingItems, setPricingItems] = useState([
   {
     product: "Handwoven Cotton Saree",
@@ -139,7 +157,7 @@ const [pricingItems, setPricingItems] = useState([
 }, [accountRole, accountName]);
 const loadProducts = async () => {
   try {
-    const response = await fetch("https://craft-link-s9ua.onrender.com");
+    const response = await fetch("http://localhost:5000/api/products");
 
     if (!response.ok) {
       throw new Error("Failed to fetch products");
@@ -175,7 +193,7 @@ const loadOrders = async () => {
   try {
     setOrdersLoading(true);
 
-    const response = await fetch("https://craft-link-s9ua.onrender.com/api/orders");
+    const response = await fetch("http://localhost:5000/api/orders");
 
     if (!response.ok) {
       throw new Error("Failed to fetch orders");
@@ -229,7 +247,7 @@ const getLocalDemoId = (key) => {
 };
 
 const createProfile = async ({ name, role, email, phone, state, city }) => {
-  const response = await fetch("https://craft-link-s9ua.onrender.com/api/profiles", {
+  const response = await fetch("http://localhost:5000/api/profiles", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -295,7 +313,7 @@ const placeOrder = async () => {
       return;
     }
 
-    const response = await fetch("https://craft-link-s9ua.onrender.com/api/orders", {
+    const response = await fetch("http://localhost:5000/api/orders", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -764,7 +782,7 @@ const [ordersLoading, setOrdersLoading] = useState(true);
               MARKETPLACE OVERVIEW
             </p>
 
-            <h2>Welcome back, Ravi 👋</h2>
+            <h2>Welcome back, {accountName} 👋</h2>
 
             <p className="dashboard-subtitle">
               Here's what's happening with your CraftLink AI
@@ -1243,7 +1261,7 @@ if (productForm.image instanceof File) {
   formData.append("image", productForm.image);
 
   const uploadResponse = await fetch(
-    "https://craft-link-s9ua.onrender.com/api/products/upload",
+    "http://localhost:5000/api/products/upload",
     {
       method: "POST",
       body: formData,
@@ -1269,8 +1287,8 @@ if (productForm.image instanceof File) {
     }
 
     const url = isEditing
-      ? `https://craft-link-s9ua.onrender.com/api/products/${productForm.id}`
-      : "https://craft-link-s9ua.onrender.com/api/products";
+      ? `http://localhost:5000/api/products/${productForm.id}`
+      : "http://localhost:5000/api/products";
 
     console.log("Sending request to:", url);
 
@@ -1339,13 +1357,13 @@ const deleteProduct = async (id) => {
 
   try {
     const response = await fetch(
-      `https://craft-link-s9ua.onrender.com/api/products/${id}`,
+      `http://localhost:5000/api/products/${id}`,
       {
         method: "DELETE",
       }
     );
 
-   const result = await response.json();
+    const result = await response.json();
 
     if (!response.ok || !result.success) {
       alert(result.message || "Failed to delete product");
@@ -2426,12 +2444,7 @@ const deleteProduct = async (id) => {
         <div className="settings-layout">
           <div className="settings-profile-card">
             <div className={`settings-profile-avatar ${accountRole === "Artisan" ? "artisan-profile" : ""}`}>
-              {accountName
-                  .split(" ")
-                  .map((part) => part[0])
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase()}
+              {getInitials(accountName)}
             </div>
             <h3>{accountName}</h3>
             <p>{accountRole} Workspace</p>
@@ -2902,8 +2915,9 @@ if (!isLoggedIn && showRegister) {
 
           sessionStorage.setItem("accountRole", userRole);
           sessionStorage.setItem("accountName", formData.name);
+          sessionStorage.setItem(`${userRole.toLowerCase()}AccountName`, formData.name);
           sessionStorage.setItem("craftlinkProfileId", profile.id);
-          localStorage.setItem("craftlinkProfileEmail", formData.email || "");
+          sessionStorage.setItem("craftlinkProfileEmail", formData.email || "");
           sessionStorage.setItem("isLoggedIn", "true");
 
           alert("Account created successfully!");
@@ -2940,6 +2954,7 @@ if (!isLoggedIn) {
 
         sessionStorage.setItem("accountRole", userRole);
         sessionStorage.setItem("accountName", userName);
+        sessionStorage.setItem(`${userRole.toLowerCase()}AccountName`, userName);
         sessionStorage.setItem("isLoggedIn", "true");
 
         setIsLoggedIn(true);
@@ -3089,12 +3104,7 @@ if (!isLoggedIn) {
                     : ""
                 }`}
               >
-                {accountName
-                  .split(" ")
-                  .map((part) => part[0])
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase()}
+                {getInitials(accountName)}
               </div>
 
               <div className="profile-info">
@@ -3134,23 +3144,18 @@ if (!isLoggedIn) {
                   className={`account-option ${accountRole === "Buyer" ? "active-account" : ""}`}
                   onClick={() => {
                     setAccountRole("Buyer");
-                    sessionStorage.setItem("accountRole", "Buyer");
+                    setAccountName(buyerAccountName);
                     setActiveMenu("Dashboard");
                     setShowAccountMenu(false);
                   }}
                 >
                   <div className="account-avatar">
-                    {accountName
-                      .split(" ")
-                      .map((part) => part[0])
-                      .join("")
-                      .slice(0, 2)
-                      .toUpperCase()}
+                    {getInitials(buyerAccountName)}
                   </div>
 
                   <div className="account-option-info">
                     <strong>
-                      {accountName}
+                      {buyerAccountName}
                     </strong>
 
                     <span>
@@ -3166,23 +3171,18 @@ if (!isLoggedIn) {
                   className={`account-option ${accountRole === "Artisan" ? "active-account" : ""}`}
                   onClick={() => {
                     setAccountRole("Artisan");
-                    sessionStorage.setItem("accountRole", "Artisan");
+                    setAccountName(artisanAccountName);
                     setActiveMenu("Dashboard");
                     setShowAccountMenu(false);
                   }}
                 >
                   <div className="account-avatar artisan-avatar">
-                    {accountName
-                      .split(" ")
-                      .map((part) => part[0])
-                      .join("")
-                      .slice(0, 2)
-                      .toUpperCase()}
+                    {getInitials(artisanAccountName)}
                   </div>
 
                   <div className="account-option-info">
                     <strong>
-                      {accountName}
+                      {artisanAccountName}
                     </strong>
 
                     <span>
