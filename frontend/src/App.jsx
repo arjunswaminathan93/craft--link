@@ -36,6 +36,8 @@ import Login from "./login";
 import Register from "./register";
 import "./App.css";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 
   function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
@@ -147,7 +149,7 @@ const [pricingItems, setPricingItems] = useState([
 }, [accountRole, accountName]);
 const loadProducts = async () => {
   try {
-    const response = await fetch("http://localhost:5000/api/products");
+    const response = await fetch(`${API_URL}/api/products`);
 
     if (!response.ok) {
       throw new Error("Failed to fetch products");
@@ -183,7 +185,7 @@ const loadOrders = async () => {
   try {
     setOrdersLoading(true);
 
-    const response = await fetch("http://localhost:5000/api/orders");
+    const response = await fetch(`${API_URL}/api/orders`);
 
     if (!response.ok) {
       throw new Error("Failed to fetch orders");
@@ -237,7 +239,7 @@ const getLocalDemoId = (key) => {
 };
 
 const createProfile = async ({ name, role, email, phone, state, city }) => {
-  const response = await fetch("http://localhost:5000/api/profiles", {
+  const response = await fetch(`${API_URL}/api/profiles`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -295,15 +297,20 @@ const placeOrder = async () => {
   setPlacingOrder(true);
 
   try {
-    const buyerId = getLocalDemoId("craftlinkBuyerId");
+    const buyerId = getCurrentProfileId();
     const artisanId = selectedProduct.artisan_id;
+
+    if (!buyerId) {
+      alert("Buyer profile not found. Please logout and login/register again.");
+      return;
+    }
 
     if (!artisanId) {
       alert("This product is not linked to an Artisan.");
       return;
     }
 
-    const response = await fetch("http://localhost:5000/api/orders", {
+    const response = await fetch(`${API_URL}/api/orders`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1251,7 +1258,7 @@ if (productForm.image instanceof File) {
   formData.append("image", productForm.image);
 
   const uploadResponse = await fetch(
-    "http://localhost:5000/api/products/upload",
+    `${API_URL}/api/products/upload`,
     {
       method: "POST",
       body: formData,
@@ -1277,8 +1284,8 @@ if (productForm.image instanceof File) {
     }
 
     const url = isEditing
-      ? `http://localhost:5000/api/products/${productForm.id}`
-      : "http://localhost:5000/api/products";
+      ? `${API_URL}/api/products/${productForm.id}`
+      : `${API_URL}/api/products`;
 
     console.log("Sending request to:", url);
 
@@ -1347,7 +1354,7 @@ const deleteProduct = async (id) => {
 
   try {
     const response = await fetch(
-      `http://localhost:5000/api/products/${id}`,
+      `${API_URL}/api/products/${id}`,
       {
         method: "DELETE",
       }
@@ -2895,8 +2902,8 @@ if (!isLoggedIn && showRegister) {
             name: formData.name,
             role: userRole,
             email: formData.email,
-            phone: formData.phone,
-            state: formData.state,
+            phone: formData.mobile,
+            state: null,
             city: formData.city,
           });
 
@@ -2913,6 +2920,10 @@ if (!isLoggedIn && showRegister) {
           );
           sessionStorage.setItem("craftlinkProfileId", profile.id);
           sessionStorage.setItem("craftlinkProfileEmail", formData.email || "");
+          localStorage.setItem(
+            `craftlinkProfile_${userRole}_${(formData.email || "").trim().toLowerCase()}`,
+            profile.id
+          );
           sessionStorage.setItem("isLoggedIn", "true");
 
           alert("Account created successfully!");
@@ -2955,6 +2966,18 @@ if (!isLoggedIn) {
             : "craftlinkBuyerName",
           userName
         );
+
+        const profileId = localStorage.getItem(
+          `craftlinkProfile_${userRole}_${email.trim().toLowerCase()}`
+        );
+
+        if (!profileId) {
+          alert("Account profile not found. Please register this account first.");
+          return;
+        }
+
+        sessionStorage.setItem("craftlinkProfileId", profileId);
+        sessionStorage.setItem("craftlinkProfileEmail", email.trim().toLowerCase());
         sessionStorage.setItem("isLoggedIn", "true");
 
         setIsLoggedIn(true);
