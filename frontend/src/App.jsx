@@ -63,26 +63,16 @@ import "./App.css";
   );
     
   const [accountName, setAccountName] = useState(
-      () => sessionStorage.getItem("accountName") || "Ravi Verma"
+      () => sessionStorage.getItem("accountName") || "User"
   );
 
-  const getInitials = (name) => {
-    return (name || "User")
-      .split(" ")
-      .filter(Boolean)
-      .map((part) => part[0])
-      .join("")
+  const getInitials = (name) =>
+    (name || "User")
+      .trim()
+      .split(/\s+/)
       .slice(0, 2)
-      .toUpperCase();
-  };
-
-  const buyerAccountName =
-    sessionStorage.getItem("buyerAccountName") ||
-    (accountRole === "Buyer" ? accountName : "Buyer");
-
-  const artisanAccountName =
-    sessionStorage.getItem("artisanAccountName") ||
-    (accountRole === "Artisan" ? accountName : "Artisan");
+      .map((part) => part[0]?.toUpperCase() || "")
+      .join("") || "U";
 const [pricingItems, setPricingItems] = useState([
   {
     product: "Handwoven Cotton Saree",
@@ -2915,7 +2905,12 @@ if (!isLoggedIn && showRegister) {
 
           sessionStorage.setItem("accountRole", userRole);
           sessionStorage.setItem("accountName", formData.name);
-          sessionStorage.setItem(`${userRole.toLowerCase()}AccountName`, formData.name);
+          sessionStorage.setItem(
+            userRole === "Artisan"
+              ? "craftlinkArtisanName"
+              : "craftlinkBuyerName",
+            formData.name
+          );
           sessionStorage.setItem("craftlinkProfileId", profile.id);
           sessionStorage.setItem("craftlinkProfileEmail", formData.email || "");
           sessionStorage.setItem("isLoggedIn", "true");
@@ -2954,7 +2949,12 @@ if (!isLoggedIn) {
 
         sessionStorage.setItem("accountRole", userRole);
         sessionStorage.setItem("accountName", userName);
-        sessionStorage.setItem(`${userRole.toLowerCase()}AccountName`, userName);
+        sessionStorage.setItem(
+          userRole === "Artisan"
+            ? "craftlinkArtisanName"
+            : "craftlinkBuyerName",
+          userName
+        );
         sessionStorage.setItem("isLoggedIn", "true");
 
         setIsLoggedIn(true);
@@ -3141,56 +3141,74 @@ if (!isLoggedIn) {
 
                 <button
                   type="button"
-                  className={`account-option ${accountRole === "Buyer" ? "active-account" : ""}`}
+                  className={`account-option ${
+                    accountRole === "Buyer" ? "active-account" : ""
+                  }`}
                   onClick={() => {
+                    const buyerName =
+                      sessionStorage.getItem("craftlinkBuyerName") ||
+                      accountName;
+
                     setAccountRole("Buyer");
-                    setAccountName(buyerAccountName);
+                    setAccountName(buyerName);
+                    sessionStorage.setItem("accountRole", "Buyer");
+                    sessionStorage.setItem("accountName", buyerName);
                     setActiveMenu("Dashboard");
                     setShowAccountMenu(false);
                   }}
                 >
                   <div className="account-avatar">
-                    {getInitials(buyerAccountName)}
+                    {getInitials(
+                      sessionStorage.getItem("craftlinkBuyerName") ||
+                      (accountRole === "Buyer" ? accountName : "Buyer")
+                    )}
                   </div>
-
                   <div className="account-option-info">
                     <strong>
-                      {buyerAccountName}
+                      {sessionStorage.getItem("craftlinkBuyerName") ||
+                        (accountRole === "Buyer" ? accountName : "Buyer")}
                     </strong>
-
-                    <span>
-                      Buyer Account
-                    </span>
+                    <span>Buyer Account</span>
                   </div>
-
-                  {accountRole === "Buyer" && <CheckCircle2 size={18} />}
+                  {accountRole === "Buyer" && (
+                    <CheckCircle2 size={18} />
+                  )}
                 </button>
 
                 <button
                   type="button"
-                  className={`account-option ${accountRole === "Artisan" ? "active-account" : ""}`}
+                  className={`account-option ${
+                    accountRole === "Artisan" ? "active-account" : ""
+                  }`}
                   onClick={() => {
+                    const artisanName =
+                      sessionStorage.getItem("craftlinkArtisanName") ||
+                      accountName;
+
                     setAccountRole("Artisan");
-                    setAccountName(artisanAccountName);
+                    setAccountName(artisanName);
+                    sessionStorage.setItem("accountRole", "Artisan");
+                    sessionStorage.setItem("accountName", artisanName);
                     setActiveMenu("Dashboard");
                     setShowAccountMenu(false);
                   }}
                 >
                   <div className="account-avatar artisan-avatar">
-                    {getInitials(artisanAccountName)}
+                    {getInitials(
+                      sessionStorage.getItem("craftlinkArtisanName") ||
+                      (accountRole === "Artisan" ? accountName : "Artisan")
+                    )}
                   </div>
-
                   <div className="account-option-info">
                     <strong>
-                      {artisanAccountName}
+                      {sessionStorage.getItem("craftlinkArtisanName") ||
+                        (accountRole === "Artisan" ? accountName : "Artisan")}
                     </strong>
-
-                    <span>
-                      Artisan Account
-                    </span>
+                    <span>Artisan Account</span>
                   </div>
-
-                  {accountRole === "Artisan" && <CheckCircle2 size={18} />}
+                  {accountRole === "Artisan" && (
+                    <CheckCircle2 size={18} />
+                  )}
                 </button>
 
                 <div className="account-dropdown-line" />
