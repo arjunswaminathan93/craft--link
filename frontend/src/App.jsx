@@ -2905,7 +2905,7 @@ if (!isLoggedIn && showRegister) {
 
           sessionStorage.setItem("accountRole", userRole);
           sessionStorage.setItem("accountName", formData.name);
-          sessionStorage.setItem(
+          localStorage.setItem(
             userRole === "Artisan"
               ? "craftlinkArtisanName"
               : "craftlinkBuyerName",
@@ -2949,7 +2949,7 @@ if (!isLoggedIn) {
 
         sessionStorage.setItem("accountRole", userRole);
         sessionStorage.setItem("accountName", userName);
-        sessionStorage.setItem(
+        localStorage.setItem(
           userRole === "Artisan"
             ? "craftlinkArtisanName"
             : "craftlinkBuyerName",
@@ -3146,7 +3146,7 @@ if (!isLoggedIn) {
                   }`}
                   onClick={() => {
                     const buyerName =
-                      sessionStorage.getItem("craftlinkBuyerName") ||
+                      localStorage.getItem("craftlinkBuyerName") ||
                       accountName;
 
                     setAccountRole("Buyer");
@@ -3159,13 +3159,13 @@ if (!isLoggedIn) {
                 >
                   <div className="account-avatar">
                     {getInitials(
-                      sessionStorage.getItem("craftlinkBuyerName") ||
+                      localStorage.getItem("craftlinkBuyerName") ||
                       (accountRole === "Buyer" ? accountName : "Buyer")
                     )}
                   </div>
                   <div className="account-option-info">
                     <strong>
-                      {sessionStorage.getItem("craftlinkBuyerName") ||
+                      {localStorage.getItem("craftlinkBuyerName") ||
                         (accountRole === "Buyer" ? accountName : "Buyer")}
                     </strong>
                     <span>Buyer Account</span>
@@ -3182,7 +3182,7 @@ if (!isLoggedIn) {
                   }`}
                   onClick={() => {
                     const artisanName =
-                      sessionStorage.getItem("craftlinkArtisanName") ||
+                      localStorage.getItem("craftlinkArtisanName") ||
                       accountName;
 
                     setAccountRole("Artisan");
@@ -3195,13 +3195,13 @@ if (!isLoggedIn) {
                 >
                   <div className="account-avatar artisan-avatar">
                     {getInitials(
-                      sessionStorage.getItem("craftlinkArtisanName") ||
+                      localStorage.getItem("craftlinkArtisanName") ||
                       (accountRole === "Artisan" ? accountName : "Artisan")
                     )}
                   </div>
                   <div className="account-option-info">
                     <strong>
-                      {sessionStorage.getItem("craftlinkArtisanName") ||
+                      {localStorage.getItem("craftlinkArtisanName") ||
                         (accountRole === "Artisan" ? accountName : "Artisan")}
                     </strong>
                     <span>Artisan Account</span>
